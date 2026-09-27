@@ -1,5 +1,9 @@
 # Qwen Image Book — AI 繪本
 
+![記憶方舟 P1 草原上的塔](images/page1.jpg)
+
+*P1《草原上的塔》—《記憶方舟》第一頁*
+
 42 頁 AI 繪本。故事與提示詞定案後，用 Qwen Image 2.1 + ComfyUI 逐頁生成圖片，再與故事文字打包成可列印的 ODT。
 
 ## 最終成品
@@ -14,8 +18,11 @@ compressed/    42 張 ODT 用圖（JPG，每頁最新版本）
 generated/     原始 PNG（各版本，未壓縮；不進 git）
 api/           ComfyUI 生成腳本與模板
 archive/       舊版本（舊 ODT、舊腳本、舊筆記；不進 git）
+images/        網頁版用圖（42 張，build_web.py 從 compressed/ 複製而來）
+index.html     靜態網頁版（build_web.py 產出，GitHub Pages 直接發布）
 build_odt.py   ODT 打包腳本
 compress_images.py  壓圖腳本
+build_web.py   網頁版打包腳本
 ```
 
 ## 故事與提示詞（唯一來源）
@@ -69,6 +76,18 @@ python build_odt.py                # DOCX 中繼 → LibreOffice → 繪本_42�
 
 需要 LibreOffice（`C:\Program Files\LibreOffice\program\soffice.exe`）。`build_odt.py` 會自動轉 PDF 驗證 42 頁。
 注意：打包前不要開著 ODT 檔（檔案被佔用會寫不進去）。
+
+## 靜態網頁版（GitHub Pages）
+
+```
+python build_web.py    # 解析 完整故事.md → 產出 index.html，並複製 42 張圖到 images/
+```
+
+版面：翻頁電子書，共 47 頁（封面＋前言 2 頁＋42 頁正文＋開發過程＋生成環境）。
+翻頁方式：左右箭頭鍵、點畫面、左右滑動、左右按鈕；按鈕可切換回「完整直式捲動」版面。
+純靜態（單一 HTML＋42 張 JPG＋少量原生 JS、無外掛、無 CDN），改故事文字後重跑此腳本即可更新。
+
+發布：把本 repo 放上 GitHub，在 repo 的 Settings → Pages 啟用（來源選 root），`index.html` 與 `images/` 需先 commit 進去。
 
 ## 圖片版本記錄
 

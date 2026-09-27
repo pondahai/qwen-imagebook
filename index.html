@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>記憶方舟｜42 頁 AI 繪本</title>
+<style>
+:root { --ink:#3a3226; --paper:#f6f1e6; --accent:#8a6d3b; --muted:#a09478; --card:#fffdf7; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Noto Serif TC","PMingLiU","Microsoft JhengHei",serif; }
+.wrap { max-width:760px; margin:0 auto; padding:28px 16px 56px; }
+.site { text-align:center; margin-bottom:20px; }
+.site h1 { font-size:1.9rem; margin:0 0 6px; letter-spacing:.08em; }
+.site .subtitle { color:var(--muted); font-size:.92rem; line-height:1.7; margin:0; }
+#modeBtn { margin-top:12px; background:none; border:1px solid #cbbd97; color:var(--muted);
+  border-radius:20px; padding:6px 18px; font-size:.85rem; cursor:pointer; font-family:inherit; }
+#modeBtn:hover { color:var(--ink); border-color:var(--accent); }
+
+/* ---- 翻頁電子書 ---- */
+.readerbox { position:relative; }
+.stage { position:relative; height:min(80vh,800px); background:var(--card);
+  border-radius:14px; box-shadow:0 8px 30px rgba(90,70,40,.16); overflow:hidden;
+  perspective:1800px; cursor:pointer; }
+.sheet { position:absolute; inset:0; padding:30px 44px; opacity:0; pointer-events:none;
+  transform:rotateY(10deg) translateX(8%); transform-origin:left center;
+  transition:transform .5s ease, opacity .5s ease; }
+.sheet.active { opacity:1; pointer-events:auto; transform:none; }
+.sheet.before { opacity:0; transform:rotateY(-10deg) translateX(-8%); transform-origin:right center; }
+.inner { height:100%; overflow-y:auto; display:flex; flex-direction:column;
+  align-items:center; text-align:center; }
+.inner::-webkit-scrollbar { width:6px; }
+.inner::-webkit-scrollbar-thumb { background:#d8cdb4; border-radius:3px; }
+.covtitle { font-size:2.6rem; font-weight:700; margin-top:16vh; letter-spacing:.12em; }
+.covsub { color:var(--muted); line-height:2.1; margin-top:20px; }
+.covhint { margin-top:20vh; color:#c4b795; font-size:.85rem; }
+.sheet h2 { border:none; margin:0 0 18px; font-size:1.4rem; }
+.sheet p { font-size:1.02rem; line-height:2; text-align:justify; margin:0 0 14px; max-width:620px; }
+.sheet ul { padding-left:1.3em; margin:0 0 14px; }
+.sheet li { font-size:1rem; line-height:1.9; margin:6px 0; }
+.sheet ol.dev { padding-left:1.3em; margin:0; width:100%; max-width:620px; text-align:left; }
+.sheet ol.dev li { margin:10px 0; }
+.sheet ol.dev b { color:var(--accent); }
+.sheet .pnum { font-size:.78rem; color:var(--muted); letter-spacing:.25em; }
+.sheet .ptitle { font-size:1.3rem; font-weight:700; margin:6px 0 12px; }
+.sheet img { width:100%; max-width:460px; max-height:44vh; object-fit:contain;
+  border-radius:8px; margin:0 auto; }
+.sheet .ptext { font-size:1.03rem; line-height:2; margin:16px 0 0; }
+.sheet .credits { margin-top:20px; padding:18px 22px; background:#efe8d8; border-radius:12px;
+  font-size:.95rem; line-height:2; text-align:left; }
+.sheet .credits b { display:block; margin-bottom:6px; font-size:1.05rem; }
+.nav { position:absolute; top:50%; transform:translateY(-50%); width:44px; height:44px;
+  border-radius:50%; border:1px solid #d8cdb4; background:var(--card); color:var(--ink);
+  font-size:1.5rem; line-height:1; cursor:pointer; padding:0 0 4px; z-index:5;
+  box-shadow:0 2px 8px rgba(90,70,40,.15); }
+.nav:hover { background:#f3ecdb; }
+.nav-prev { left:10px; } .nav-next { right:10px; }
+.barwrap { height:4px; background:#e8dfc9; border-radius:2px; margin-top:14px; overflow:hidden; }
+.bar { height:100%; width:2%; background:var(--accent); transition:width .4s ease; }
+.cnt { text-align:center; color:var(--muted); font-size:.8rem; margin-top:8px; letter-spacing:.1em; }
+
+/* ---- 直式捲動版面 ---- */
+#listview { display:none; }
+body.listmode #reader { display:none; }
+body.listmode #listview { display:block; }
+#listview h2 { font-size:1.5rem; border-left:4px solid var(--accent); padding-left:10px; margin:48px 0 16px; }
+#listview .intro p { font-size:1.02rem; line-height:1.95; margin:0 0 14px; }
+#listview .intro ul { margin:0 0 14px; padding-left:1.4em; }
+#listview .intro li { font-size:1rem; line-height:1.85; margin:6px 0; }
+.part { display:flex; flex-wrap:wrap; align-items:baseline; gap:12px; margin:56px 0 4px;
+  padding:10px 16px; border-radius:10px; }
+.part .pname { font-size:1.3rem; font-weight:700; }
+.part .pmeta { font-size:.85rem; opacity:.75; }
+.page { margin:26px 0 42px; text-align:center; }
+.pnum { font-size:.78rem; color:var(--muted); letter-spacing:.25em; }
+.ptitle { font-size:1.3rem; font-weight:700; margin:6px 0 14px; }
+.page img { width:100%; max-width:560px; border-radius:10px;
+  box-shadow:0 3px 14px rgba(90,70,40,.18); }
+.ptext { font-size:1.05rem; line-height:2; margin:20px auto 0; max-width:560px; text-align:justify; }
+ol.dev { padding-left:1.3em; }
+ol.dev li { margin:12px 0; line-height:1.85; }
+ol.dev b { color:var(--accent); }
+.credits { margin-top:20px; padding:18px 20px; background:#efe8d8; border-radius:10px;
+  font-size:.9rem; line-height:1.9; }
+.credits b { display:block; margin-bottom:6px; }
+footer { text-align:center; margin-top:44px; color:var(--muted); font-size:.8rem; line-height:1.8; }
+@media (max-width:560px) {
+  .sheet { padding:24px 34px; }
+  .covtitle { font-size:2rem; }
+  .nav { width:38px; height:38px; font-size:1.2rem; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="site">
+<h1>記憶方舟</h1>
+<p class="subtitle">42 頁 AI 繪本 · 為測試「Qwen-Image 2.1 模型 × GB10 機器」而構思的圖文故事</p>
+<button id="modeBtn" type="button">⊞ 看完整直式版面</button>
+</header>
+<section id="reader">
+<div class="readerbox">
+<div class="stage" id="stage">
+<div class="sheet active"><div class="inner"><div class="covtitle">記憶方舟</div><div class="covsub">42 頁 AI 繪本<br>為測試「Qwen-Image 2.1 × GB10」而構思</div><div class="covhint">← → 鍵、左右滑動，或點畫面翻頁</div></div></div>
+<div class="sheet"><div class="inner"><h2>前言：測試的源起</h2><p>這本畫本，是為了測試一套軟硬體組合而構思的：<b>Qwen-Image 2.1</b>（生圖模型）與 <b>NVIDIA GB10</b>（機器）。</p><p>我們沒有只測幾張單圖，而是讓它從頭到尾生成一本完整的 42 頁繪本。因為只有「完成品」才測得出模型的極限：</p><ul><li><b>批次耐力</b> — 42 張連續生成、每張 30-60 秒、一批跑完超過半小時，測機器能否全程穩定不掉鏈子。</li><li><b>長篇一致性</b> — 同一批角色（小滿、小芽、老燈、蝕）與同一座塔反覆出現，測模型「記不記得住」同一個人、同一座塔。</li><li><b>色彩控制</b> — 42 頁分成 5 段，每段不同色調（藍紫 → 紅橙 → 綠金），測提示詞能不能主導畫面配色。</li></ul><p>測試也真的測出了問題，最明顯的是「塔的造型沒有統一」——翻到最後「開發過程」可以看到怎麼修好它。</p></div></div>
+<div class="sheet"><div class="inner"><h2>故事大綱</h2><p>某個傍晚，草原中央升起一座比城市最高樓還高的塔。沒有人知道那是什麼，大家先叫它「那座塔」。</p><p>十歲的林小滿決定去看個清楚。塔的最深處，他遇到一個忘了自己名字、用光做成的存在——「老燈」，也知道了塔的真實身分：<b>記憶方舟</b>，保存人類的記憶。而因為專門吞噬記憶與光的舊敵<b>蝕</b>正在逼近，方舟需要一顆「人心」才能完全啟動。</p><p>小滿自願走進核心，成為方舟的心。決戰時，他把手心的妹妹笑聲與家的溫度丟進蝕的身體裡——蝕什麼光都吃得下，唯一消化不了的，是「想記住的意志」。</p><p>蝕碎了，塔轉成柔和的綠金色，老燈終於睡著。每天傍晚，小芽的窗邊會亮一盞小小的光：「我在。」「我記得你。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P1</div><div class="ptitle">草原上的塔</div><img src="images/page1.jpg" alt="P1 草原上的塔" loading="lazy"><p class="ptext">那天傍晚，天空是梨子殼的顏色。草原中央升起一座塔，比城市裡最高的樓還高。小滿坐在屋頂上，手握一杯熱牛奶，看著它一層一層變高。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P2</div><div class="ptitle">整座塔</div><img src="images/page2.jpg" alt="P2 整座塔" loading="lazy"><p class="ptext">塔站得很直，直得像要戳破雲。塔身亮起的燈一排一排，像在試一件新外套。全城的窗口，都看得到它。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P3</div><div class="ptitle">所有人的手機</div><img src="images/page3.jpg" alt="P3 所有人的手機" loading="lazy"><p class="ptext">街上擠滿了人，手機全部舉高，指著天空。沒有人知道那是什麼，所以大家先叫它「那座塔」。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P4</div><div class="ptitle">那杯熱牛奶</div><img src="images/page4.jpg" alt="P4 那杯熱牛奶" loading="lazy"><p class="ptext">媽媽說：「別看它，危險。」小滿喝完最後一口熱牛奶，說：「媽媽，我要去看看。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P5</div><div class="ptitle">不蓋房子的塔</div><img src="images/page5.jpg" alt="P5 不蓋房子的塔" loading="lazy"><p class="ptext">第二天，新聞說塔是「住宅區」。但小滿注意到：塔頂的光不是照給人的——它照向天空，像燈塔在呼喚什麼。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P6</div><div class="ptitle">舊探測器</div><img src="images/page6.jpg" alt="P6 舊探測器" loading="lazy"><p class="ptext">小滿收拾好背包，裡面裝了爸爸留下的舊探測器。他不知道它能測什麼，但爸爸說過：「遇到不懂的東西，先探一下。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P7</div><div class="ptitle">穿過草原</div><img src="images/page7.jpg" alt="P7 穿過草原" loading="lazy"><p class="ptext">草齊膝蓋高，每走一步都沙沙作響。塔在前方越變越大，手裡的探測器開始輕輕地震。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P8</div><div class="ptitle">門</div><img src="images/page8.jpg" alt="P8 門" loading="lazy"><p class="ptext">靠近的時候，塔門自己開了。一圈柔和的光圈滾出來，不像波，像一句話：「我在等你。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P9</div><div class="ptitle">重力關掉的地方</div><img src="images/page9.jpg" alt="P9 重力關掉的地方" loading="lazy"><p class="ptext">塔裡面，他浮了起來。碎片的光從身邊飄過，像倒轉的魚缸。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P10</div><div class="ptitle">老燈</div><img src="images/page10.jpg" alt="P10 老燈" loading="lazy"><p class="ptext">一個用光做的身影站在前方，面容半透明，光色很舊。「小朋友，」它說，「我忘記自己叫什麼了。」「那……老燈？」「老燈，嗯，好名字。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P11</div><div class="ptitle">記憶方舟</div><img src="images/page11.jpg" alt="P11 記憶方舟" loading="lazy"><p class="ptext">老燈打開一座全息投影，裡面是人類的記憶：燈塔、婚禮、第一次放風箏、學走路的孩子。「我存下這些，」老燈說，「這裡是記憶方舟。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P12</div><div class="ptitle">為什麼是記憶塔？</div><img src="images/page12.jpg" alt="P12 為什麼是記憶塔？" loading="lazy"><p class="ptext">「為什麼要存記憶？」「為什麼是現在？」老燈眼中的光晃了一下。「因為有人要來了。一個吃記憶的。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P13</div><div class="ptitle">蝕</div><img src="images/page13.jpg" alt="P13 蝕" loading="lazy"><p class="ptext">一個光球展開，是遙遠的天空。幾何艦隊穿光而來，所過之處，光熄滅了。「它叫蝕，」老燈說，「我們追了很久很久。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P14</div><div class="ptitle">人心</div><img src="images/page14.jpg" alt="P14 人心" loading="lazy"><p class="ptext">「我守太久，忘了做人是什麼感覺。方舟需要一顆人心才能完全啟動。小朋友，你願意嗎？」小滿想起家裡的妹妹，點了頭。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P15</div><div class="ptitle">核心啟動</div><img src="images/page15.jpg" alt="P15 核心啟動" loading="lazy"><p class="ptext">塔裡所有的光都流往中心。整座塔亮起來，像一盞很大的燈，被從裡面點燃。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P16</div><div class="ptitle">心</div><img src="images/page16.jpg" alt="P16 心" loading="lazy"><p class="ptext">小滿自己走進核心。身體變半透明，他成了方舟的心。第一次，他感覺到全世界的記憶，從身體裡面流過。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P17</div><div class="ptitle">兩種眼睛</div><img src="images/page17.jpg" alt="P17 兩種眼睛" loading="lazy"><p class="ptext">小滿睜開眼，同時看到兩種世界：自己的世界，和老燈的世界。兩層疊在一起，像兩張透片。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P18</div><div class="ptitle">小滿的記憶</div><img src="images/page18.jpg" alt="P18 小滿的記憶" loading="lazy"><p class="ptext">光裡有他的家：媽媽的廚房、爸爸的工具箱、小芽第一次走路。小芽在笑。小滿把那個聲音抓在手心，不讓它掉。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P19</div><div class="ptitle">老燈的記憶</div><img src="images/page19.jpg" alt="P19 老燈的記憶" loading="lazy"><p class="ptext">老燈的世界很舊很舊：看星星亮了又暗，看一盞燈熄了又一盞，一直走，一直守。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P20</div><div class="ptitle">兩根線</div><img src="images/page20.jpg" alt="P20 兩根線" loading="lazy"><p class="ptext">一根光線是暖的，一根是涼的。它們交纏在一起，發現了一種新的顏色。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P21</div><div class="ptitle">想起溫度</div><img src="images/page21.jpg" alt="P21 想起溫度" loading="lazy"><p class="ptext">「我想起來了，」老燈說，聲音很輕，「溫度是什麼。」千年以來，它的光第一次變暖。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P22</div><div class="ptitle">紅色警告</div><img src="images/page22.jpg" alt="P22 紅色警告" loading="lazy"><p class="ptext">塔的光突然全紅了。探測器瘋狂地震。蝕到了。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P23</div><div class="ptitle">塔準備了</div><img src="images/page23.jpg" alt="P23 塔準備了" loading="lazy"><p class="ptext">塔展開護盾，燈光排成列陣。老燈的光比剛才暗了一些。小滿沒有說，但他知道了。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P24</div><div class="ptitle">他會拿光了</div><img src="images/page24.jpg" alt="P24 他會拿光了" loading="lazy"><p class="ptext">小滿攤開手，一盞光落在掌心，是溫的。「我算一個了，」他想，「我也在這裡。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P25</div><div class="ptitle">天空變紅</div><img src="images/page25.jpg" alt="P25 天空變紅" loading="lazy"><p class="ptext">雲被壓得很低，天空邊緣像一道沒癒合的傷。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P26</div><div class="ptitle">蝕</div><img src="images/page26.jpg" alt="P26 蝕" loading="lazy"><p class="ptext">艦隊沒有聲音。它一邊走，一邊吃光。所經之處，天空暗下去。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P27</div><div class="ptitle">第一波</div><img src="images/page27.jpg" alt="P27 第一波" loading="lazy"><p class="ptext">第一下撞在護盾上，整座塔顫了一顫。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P28</div><div class="ptitle">他進去了</div><img src="images/page28.jpg" alt="P28 他進去了" loading="lazy"><p class="ptext">小滿握著掌心的光，走進戰場。「老燈，我在。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P29</div><div class="ptitle">光對光</div><img src="images/page29.jpg" alt="P29 光對光" loading="lazy"><p class="ptext">光線交錯，天空被撕開。蝕比他想的快，也比他想的聰明。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P30</div><div class="ptitle">蝕的進化</div><img src="images/page30.jpg" alt="P30 蝕的進化" loading="lazy"><p class="ptext">蝕變了形狀，也學會了打。一招一招，壓過來。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P31</div><div class="ptitle">老燈的光在弱</div><img src="images/page31.jpg" alt="P31 老燈的光在弱" loading="lazy"><p class="ptext">老燈的光一層層暗下去，核心露出來，像一盞快沒油的燈。「小朋友，」它說，「到了。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P32</div><div class="ptitle">他最害怕失去的東西</div><img src="images/page32.jpg" alt="P32 他最害怕失去的東西" loading="lazy"><p class="ptext">小滿閉上眼，想起最怕失去的東西：小芽的笑聲。他睜開眼，把那個東西握在手掌心。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P33</div><div class="ptitle">消化不了的東西</div><img src="images/page33.jpg" alt="P33 消化不了的東西" loading="lazy"><p class="ptext">他把它丟進蝕的身體。笑聲、廚房、第一次走路、整個家的溫度。蝕吃呀吃，卻消化不了。「這個叫愛，」小滿說，「你吃不下。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P34</div><div class="ptitle">勝利與再見</div><img src="images/page34.jpg" alt="P34 勝利與再見" loading="lazy"><p class="ptext">蝕碎了，碎成一盞很淡的殘光，飄向遠方。塔暗了。小滿的身影散開，像一群螢火蟲，落在塔上。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P35</div><div class="ptitle">安靜</div><img src="images/page35.jpg" alt="P35 安靜" loading="lazy"><p class="ptext">很安靜。草還是草，城還是城，只有塔在發光——換了一個顏色：綠色的。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P36</div><div class="ptitle">塔變了</div><img src="images/page36.jpg" alt="P36 塔變了" loading="lazy"><p class="ptext">塔的稜角變軟了，核心發出綠光，像一株破土的芽。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P37</div><div class="ptitle">希望</div><img src="images/page37.jpg" alt="P37 希望" loading="lazy"><p class="ptext">人們聚到塔下。他們不知道發生了什麼，但知道：有什麼東西在保護著他們。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P38</div><div class="ptitle">他回來了</div><img src="images/page38.jpg" alt="P38 他回來了" loading="lazy"><p class="ptext">綠光裡，一個身影慢慢清晰。是小滿，半是光、半是人，臉和以前一樣。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P39</div><div class="ptitle">老燈睡了</div><img src="images/page39.jpg" alt="P39 老燈睡了" loading="lazy"><p class="ptext">塔的最深處，老燈睡著了。它的光很小，像一團不肯熄的餘燼。「我守夠了，」它在夢裡說，「小朋友，換你了。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P40</div><div class="ptitle">一盞很淡的光</div><img src="images/page40.jpg" alt="P40 一盞很淡的光" loading="lazy"><p class="ptext">很遠很遠的地方，還有一盞很淡很淡的光。小滿看了很久。「我看到了，」他輕聲說，「下次，我準備好了。」</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P41</div><div class="ptitle">學著守護</div><img src="images/page41.jpg" alt="P41 學著守護" loading="lazy"><p class="ptext">小滿學著點燈、學著聽全世界的記憶、學著跟太陽說早安。新工作，但他不慌。因為夜裡，有一個人記得他。</p></div></div>
+<div class="sheet"><div class="inner"><div class="pnum">P42</div><div class="ptitle">我記得你</div><img src="images/page42.jpg" alt="P42 我記得你" loading="lazy"><p class="ptext">那天傍晚，小芽爬上屋頂。一盞光過來，坐在她旁邊。「我在，」光說。「我記得你，」小芽說。</p></div></div>
+<div class="sheet"><div class="inner"><h2>開發過程</h2><ol class="dev"><li><b>2026-09-26 · 故事定稿</b> — 決定故事地基（塔＝記憶方舟、守護者老燈、敵人蝕、主角小滿）、角色表與角色視覺基準，定稿 42 頁正文。</li><li><b>2026-09-26 · 首批批量生成</b> — 42 頁提示詞分 4 批送進 ComfyUI（每批 10-12 張、間隔 3 秒、輪詢結果），42 張全部成功。</li><li><b>2026-09-26 · 繪本檔（ODT）產出</b> — 先試直接寫 ODT 檔案格式，圖片被 LibreOffice 全數丟棄；改採「先做 DOCX 再轉 ODT」的中繼路線，搞定。</li><li><b>2026-09-27 · 全書重生成（v2）</b> — 統一提示詞格式後全書重生。驗收時發現問題：「塔的造型沒有統一」——每張圖獨立生成，AI 每頁畫了不同的塔。</li><li><b>2026-09-27 · 塔視覺塊（v3）</b> — 把固定塔描述（細高、圓頂、由內發光的巨大燈籠）寫進所有提示詞，以 P35 為基準頁，重生有塔的 15 頁。</li><li><b>2026-09-27 · 驗收通過</b> — 確認塔造型；最終檔改名為「繪本_42頁完整版.odt」；目錄整理、腳本收進專案、git 版本控制。</li><li><b>2026-09-27 · 靜態網頁版</b> — 把繪本做成翻頁電子書網頁（單一 HTML＋42 張圖，方向鍵、滑動或點畫面翻頁），不需要伺服器，GitHub Pages 即可發布。</li></ol></div></div>
+<div class="sheet"><div class="inner"><h2>生成環境</h2><div class="credits"><b>生成環境</b><br>故事文字：qwen3.8-27b（大語言模型）<br>圖片生成：Qwen-Image 2.1（int8）· 文字理解 Qwen3-VL 8B（int8）· VAE（bf16）<br>硬體：NVIDIA GB10 · 128GB 統一記憶體<br>軟體：ComfyUI 0.37.0 / PyTorch 2.10 / Python 3.12<br>生成參數：1024×1024 · steps 30 · CFG 1.0 · euler / simple · denoise 1.0</div></div></div>
+</div>
+<button class="nav nav-prev" type="button" onclick="prev()" aria-label="上一頁">‹</button>
+<button class="nav nav-next" type="button" onclick="next()" aria-label="下一頁">›</button>
+</div>
+<div class="barwrap"><div class="bar" id="bar"></div></div>
+<div class="cnt" id="cnt">1 / 47</div>
+</section>
+<section id="listview">
+<div class="intro">
+<h2>前言：測試的源起</h2>
+<p>這本畫本，是為了測試一套軟硬體組合而構思的：<b>Qwen-Image 2.1</b>（生圖模型）與 <b>NVIDIA GB10</b>（機器）。</p>
+<p>我們沒有只測幾張單圖，而是讓它從頭到尾生成一本完整的 42 頁繪本。因為只有「完成品」才測得出模型的極限：</p>
+<ul>
+<li><b>批次耐力</b> — 42 張連續生成、每張 30-60 秒、一批跑完超過半小時，測機器能否全程穩定不掉鏈子。</li>
+<li><b>長篇一致性</b> — 同一批角色（小滿、小芽、老燈、蝕）與同一座塔反覆出現，測模型「記不記得住」同一個人、同一座塔。</li>
+<li><b>色彩控制</b> — 42 頁分成 5 段，每段不同色調（藍紫 → 紅橙 → 綠金），測提示詞能不能主導畫面配色。</li>
+</ul>
+<p>測試也真的測出了問題，最明顯的是「塔的造型沒有統一」——翻到最後「開發過程」可以看到怎麼修好它。</p>
+<h2>故事大綱</h2>
+<p>某個傍晚，草原中央升起一座比城市最高樓還高的塔。沒有人知道那是什麼，大家先叫它「那座塔」。</p>
+<p>十歲的林小滿決定去看個清楚。塔的最深處，他遇到一個忘了自己名字、用光做成的存在——「老燈」，也知道了塔的真實身分：<b>記憶方舟</b>，保存人類的記憶。而因為專門吞噬記憶與光的舊敵<b>蝕</b>正在逼近，方舟需要一顆「人心」才能完全啟動。</p>
+<p>小滿自願走進核心，成為方舟的心。決戰時，他把手心的妹妹笑聲與家的溫度丟進蝕的身體裡——蝕什麼光都吃得下，唯一消化不了的，是「想記住的意志」。</p>
+<p>蝕碎了，塔轉成柔和的綠金色，老燈終於睡著。每天傍晚，小芽的窗邊會亮一盞小小的光：「我在。」「我記得你。」</p>
+</div>
+<div class="part" style="background:#ede8f7;color:#5b4b8a"><span class="pname">段落 1｜巨物塔崛起</span><span class="pmeta">P1-8 · 藍紫色調</span></div>
+<div class="page">
+<div class="pnum">P1</div>
+<div class="ptitle">草原上的塔</div>
+<img src="images/page1.jpg" alt="P1 草原上的塔" loading="lazy">
+<p class="ptext">那天傍晚，天空是梨子殼的顏色。草原中央升起一座塔，比城市裡最高的樓還高。小滿坐在屋頂上，手握一杯熱牛奶，看著它一層一層變高。</p>
+</div>
+<div class="page">
+<div class="pnum">P2</div>
+<div class="ptitle">整座塔</div>
+<img src="images/page2.jpg" alt="P2 整座塔" loading="lazy">
+<p class="ptext">塔站得很直，直得像要戳破雲。塔身亮起的燈一排一排，像在試一件新外套。全城的窗口，都看得到它。</p>
+</div>
+<div class="page">
+<div class="pnum">P3</div>
+<div class="ptitle">所有人的手機</div>
+<img src="images/page3.jpg" alt="P3 所有人的手機" loading="lazy">
+<p class="ptext">街上擠滿了人，手機全部舉高，指著天空。沒有人知道那是什麼，所以大家先叫它「那座塔」。</p>
+</div>
+<div class="page">
+<div class="pnum">P4</div>
+<div class="ptitle">那杯熱牛奶</div>
+<img src="images/page4.jpg" alt="P4 那杯熱牛奶" loading="lazy">
+<p class="ptext">媽媽說：「別看它，危險。」小滿喝完最後一口熱牛奶，說：「媽媽，我要去看看。」</p>
+</div>
+<div class="page">
+<div class="pnum">P5</div>
+<div class="ptitle">不蓋房子的塔</div>
+<img src="images/page5.jpg" alt="P5 不蓋房子的塔" loading="lazy">
+<p class="ptext">第二天，新聞說塔是「住宅區」。但小滿注意到：塔頂的光不是照給人的——它照向天空，像燈塔在呼喚什麼。</p>
+</div>
+<div class="page">
+<div class="pnum">P6</div>
+<div class="ptitle">舊探測器</div>
+<img src="images/page6.jpg" alt="P6 舊探測器" loading="lazy">
+<p class="ptext">小滿收拾好背包，裡面裝了爸爸留下的舊探測器。他不知道它能測什麼，但爸爸說過：「遇到不懂的東西，先探一下。」</p>
+</div>
+<div class="page">
+<div class="pnum">P7</div>
+<div class="ptitle">穿過草原</div>
+<img src="images/page7.jpg" alt="P7 穿過草原" loading="lazy">
+<p class="ptext">草齊膝蓋高，每走一步都沙沙作響。塔在前方越變越大，手裡的探測器開始輕輕地震。</p>
+</div>
+<div class="page">
+<div class="pnum">P8</div>
+<div class="ptitle">門</div>
+<img src="images/page8.jpg" alt="P8 門" loading="lazy">
+<p class="ptext">靠近的時候，塔門自己開了。一圈柔和的光圈滾出來，不像波，像一句話：「我在等你。」</p>
+</div>
+<div class="part" style="background:#ede8f7;color:#5b4b8a"><span class="pname">段落 2｜塔內探索</span><span class="pmeta">P9-16 · 藍紫色調</span></div>
+<div class="page">
+<div class="pnum">P9</div>
+<div class="ptitle">重力關掉的地方</div>
+<img src="images/page9.jpg" alt="P9 重力關掉的地方" loading="lazy">
+<p class="ptext">塔裡面，他浮了起來。碎片的光從身邊飄過，像倒轉的魚缸。</p>
+</div>
+<div class="page">
+<div class="pnum">P10</div>
+<div class="ptitle">老燈</div>
+<img src="images/page10.jpg" alt="P10 老燈" loading="lazy">
+<p class="ptext">一個用光做的身影站在前方，面容半透明，光色很舊。「小朋友，」它說，「我忘記自己叫什麼了。」「那……老燈？」「老燈，嗯，好名字。」</p>
+</div>
+<div class="page">
+<div class="pnum">P11</div>
+<div class="ptitle">記憶方舟</div>
+<img src="images/page11.jpg" alt="P11 記憶方舟" loading="lazy">
+<p class="ptext">老燈打開一座全息投影，裡面是人類的記憶：燈塔、婚禮、第一次放風箏、學走路的孩子。「我存下這些，」老燈說，「這裡是記憶方舟。」</p>
+</div>
+<div class="page">
+<div class="pnum">P12</div>
+<div class="ptitle">為什麼是記憶塔？</div>
+<img src="images/page12.jpg" alt="P12 為什麼是記憶塔？" loading="lazy">
+<p class="ptext">「為什麼要存記憶？」「為什麼是現在？」老燈眼中的光晃了一下。「因為有人要來了。一個吃記憶的。」</p>
+</div>
+<div class="page">
+<div class="pnum">P13</div>
+<div class="ptitle">蝕</div>
+<img src="images/page13.jpg" alt="P13 蝕" loading="lazy">
+<p class="ptext">一個光球展開，是遙遠的天空。幾何艦隊穿光而來，所過之處，光熄滅了。「它叫蝕，」老燈說，「我們追了很久很久。」</p>
+</div>
+<div class="page">
+<div class="pnum">P14</div>
+<div class="ptitle">人心</div>
+<img src="images/page14.jpg" alt="P14 人心" loading="lazy">
+<p class="ptext">「我守太久，忘了做人是什麼感覺。方舟需要一顆人心才能完全啟動。小朋友，你願意嗎？」小滿想起家裡的妹妹，點了頭。</p>
+</div>
+<div class="page">
+<div class="pnum">P15</div>
+<div class="ptitle">核心啟動</div>
+<img src="images/page15.jpg" alt="P15 核心啟動" loading="lazy">
+<p class="ptext">塔裡所有的光都流往中心。整座塔亮起來，像一盞很大的燈，被從裡面點燃。</p>
+</div>
+<div class="page">
+<div class="pnum">P16</div>
+<div class="ptitle">心</div>
+<img src="images/page16.jpg" alt="P16 心" loading="lazy">
+<p class="ptext">小滿自己走進核心。身體變半透明，他成了方舟的心。第一次，他感覺到全世界的記憶，從身體裡面流過。</p>
+</div>
+<div class="part" style="background:#fbe9e3;color:#b03a26"><span class="pname">段落 3｜記憶共享</span><span class="pmeta">P17-24 · 轉紅橙</span></div>
+<div class="page">
+<div class="pnum">P17</div>
+<div class="ptitle">兩種眼睛</div>
+<img src="images/page17.jpg" alt="P17 兩種眼睛" loading="lazy">
+<p class="ptext">小滿睜開眼，同時看到兩種世界：自己的世界，和老燈的世界。兩層疊在一起，像兩張透片。</p>
+</div>
+<div class="page">
+<div class="pnum">P18</div>
+<div class="ptitle">小滿的記憶</div>
+<img src="images/page18.jpg" alt="P18 小滿的記憶" loading="lazy">
+<p class="ptext">光裡有他的家：媽媽的廚房、爸爸的工具箱、小芽第一次走路。小芽在笑。小滿把那個聲音抓在手心，不讓它掉。</p>
+</div>
+<div class="page">
+<div class="pnum">P19</div>
+<div class="ptitle">老燈的記憶</div>
+<img src="images/page19.jpg" alt="P19 老燈的記憶" loading="lazy">
+<p class="ptext">老燈的世界很舊很舊：看星星亮了又暗，看一盞燈熄了又一盞，一直走，一直守。</p>
+</div>
+<div class="page">
+<div class="pnum">P20</div>
+<div class="ptitle">兩根線</div>
+<img src="images/page20.jpg" alt="P20 兩根線" loading="lazy">
+<p class="ptext">一根光線是暖的，一根是涼的。它們交纏在一起，發現了一種新的顏色。</p>
+</div>
+<div class="page">
+<div class="pnum">P21</div>
+<div class="ptitle">想起溫度</div>
+<img src="images/page21.jpg" alt="P21 想起溫度" loading="lazy">
+<p class="ptext">「我想起來了，」老燈說，聲音很輕，「溫度是什麼。」千年以來，它的光第一次變暖。</p>
+</div>
+<div class="page">
+<div class="pnum">P22</div>
+<div class="ptitle">紅色警告</div>
+<img src="images/page22.jpg" alt="P22 紅色警告" loading="lazy">
+<p class="ptext">塔的光突然全紅了。探測器瘋狂地震。蝕到了。</p>
+</div>
+<div class="page">
+<div class="pnum">P23</div>
+<div class="ptitle">塔準備了</div>
+<img src="images/page23.jpg" alt="P23 塔準備了" loading="lazy">
+<p class="ptext">塔展開護盾，燈光排成列陣。老燈的光比剛才暗了一些。小滿沒有說，但他知道了。</p>
+</div>
+<div class="page">
+<div class="pnum">P24</div>
+<div class="ptitle">他會拿光了</div>
+<img src="images/page24.jpg" alt="P24 他會拿光了" loading="lazy">
+<p class="ptext">小滿攤開手，一盞光落在掌心，是溫的。「我算一個了，」他想，「我也在這裡。」</p>
+</div>
+<div class="part" style="background:#fbe9e3;color:#b03a26"><span class="pname">段落 4｜敵人來臨</span><span class="pmeta">P25-34 · 紅橙色调</span></div>
+<div class="page">
+<div class="pnum">P25</div>
+<div class="ptitle">天空變紅</div>
+<img src="images/page25.jpg" alt="P25 天空變紅" loading="lazy">
+<p class="ptext">雲被壓得很低，天空邊緣像一道沒癒合的傷。</p>
+</div>
+<div class="page">
+<div class="pnum">P26</div>
+<div class="ptitle">蝕</div>
+<img src="images/page26.jpg" alt="P26 蝕" loading="lazy">
+<p class="ptext">艦隊沒有聲音。它一邊走，一邊吃光。所經之處，天空暗下去。</p>
+</div>
+<div class="page">
+<div class="pnum">P27</div>
+<div class="ptitle">第一波</div>
+<img src="images/page27.jpg" alt="P27 第一波" loading="lazy">
+<p class="ptext">第一下撞在護盾上，整座塔顫了一顫。</p>
+</div>
+<div class="page">
+<div class="pnum">P28</div>
+<div class="ptitle">他進去了</div>
+<img src="images/page28.jpg" alt="P28 他進去了" loading="lazy">
+<p class="ptext">小滿握著掌心的光，走進戰場。「老燈，我在。」</p>
+</div>
+<div class="page">
+<div class="pnum">P29</div>
+<div class="ptitle">光對光</div>
+<img src="images/page29.jpg" alt="P29 光對光" loading="lazy">
+<p class="ptext">光線交錯，天空被撕開。蝕比他想的快，也比他想的聰明。</p>
+</div>
+<div class="page">
+<div class="pnum">P30</div>
+<div class="ptitle">蝕的進化</div>
+<img src="images/page30.jpg" alt="P30 蝕的進化" loading="lazy">
+<p class="ptext">蝕變了形狀，也學會了打。一招一招，壓過來。</p>
+</div>
+<div class="page">
+<div class="pnum">P31</div>
+<div class="ptitle">老燈的光在弱</div>
+<img src="images/page31.jpg" alt="P31 老燈的光在弱" loading="lazy">
+<p class="ptext">老燈的光一層層暗下去，核心露出來，像一盞快沒油的燈。「小朋友，」它說，「到了。」</p>
+</div>
+<div class="page">
+<div class="pnum">P32</div>
+<div class="ptitle">他最害怕失去的東西</div>
+<img src="images/page32.jpg" alt="P32 他最害怕失去的東西" loading="lazy">
+<p class="ptext">小滿閉上眼，想起最怕失去的東西：小芽的笑聲。他睜開眼，把那個東西握在手掌心。</p>
+</div>
+<div class="page">
+<div class="pnum">P33</div>
+<div class="ptitle">消化不了的東西</div>
+<img src="images/page33.jpg" alt="P33 消化不了的東西" loading="lazy">
+<p class="ptext">他把它丟進蝕的身體。笑聲、廚房、第一次走路、整個家的溫度。蝕吃呀吃，卻消化不了。「這個叫愛，」小滿說，「你吃不下。」</p>
+</div>
+<div class="page">
+<div class="pnum">P34</div>
+<div class="ptitle">勝利與再見</div>
+<img src="images/page34.jpg" alt="P34 勝利與再見" loading="lazy">
+<p class="ptext">蝕碎了，碎成一盞很淡的殘光，飄向遠方。塔暗了。小滿的身影散開，像一群螢火蟲，落在塔上。</p>
+</div>
+<div class="part" style="background:#e8f2e4;color:#3d7a38"><span class="pname">段落 5｜新的開始</span><span class="pmeta">P35-42 · 綠色/金色調</span></div>
+<div class="page">
+<div class="pnum">P35</div>
+<div class="ptitle">安靜</div>
+<img src="images/page35.jpg" alt="P35 安靜" loading="lazy">
+<p class="ptext">很安靜。草還是草，城還是城，只有塔在發光——換了一個顏色：綠色的。</p>
+</div>
+<div class="page">
+<div class="pnum">P36</div>
+<div class="ptitle">塔變了</div>
+<img src="images/page36.jpg" alt="P36 塔變了" loading="lazy">
+<p class="ptext">塔的稜角變軟了，核心發出綠光，像一株破土的芽。</p>
+</div>
+<div class="page">
+<div class="pnum">P37</div>
+<div class="ptitle">希望</div>
+<img src="images/page37.jpg" alt="P37 希望" loading="lazy">
+<p class="ptext">人們聚到塔下。他們不知道發生了什麼，但知道：有什麼東西在保護著他們。</p>
+</div>
+<div class="page">
+<div class="pnum">P38</div>
+<div class="ptitle">他回來了</div>
+<img src="images/page38.jpg" alt="P38 他回來了" loading="lazy">
+<p class="ptext">綠光裡，一個身影慢慢清晰。是小滿，半是光、半是人，臉和以前一樣。</p>
+</div>
+<div class="page">
+<div class="pnum">P39</div>
+<div class="ptitle">老燈睡了</div>
+<img src="images/page39.jpg" alt="P39 老燈睡了" loading="lazy">
+<p class="ptext">塔的最深處，老燈睡著了。它的光很小，像一團不肯熄的餘燼。「我守夠了，」它在夢裡說，「小朋友，換你了。」</p>
+</div>
+<div class="page">
+<div class="pnum">P40</div>
+<div class="ptitle">一盞很淡的光</div>
+<img src="images/page40.jpg" alt="P40 一盞很淡的光" loading="lazy">
+<p class="ptext">很遠很遠的地方，還有一盞很淡很淡的光。小滿看了很久。「我看到了，」他輕聲說，「下次，我準備好了。」</p>
+</div>
+<div class="page">
+<div class="pnum">P41</div>
+<div class="ptitle">學著守護</div>
+<img src="images/page41.jpg" alt="P41 學著守護" loading="lazy">
+<p class="ptext">小滿學著點燈、學著聽全世界的記憶、學著跟太陽說早安。新工作，但他不慌。因為夜裡，有一個人記得他。</p>
+</div>
+<div class="page">
+<div class="pnum">P42</div>
+<div class="ptitle">我記得你</div>
+<img src="images/page42.jpg" alt="P42 我記得你" loading="lazy">
+<p class="ptext">那天傍晚，小芽爬上屋頂。一盞光過來，坐在她旁邊。「我在，」光說。「我記得你，」小芽說。</p>
+</div>
+<h2>開發過程</h2>
+<ol class="dev">
+<li><b>2026-09-26 · 故事定稿</b> — 決定故事地基（塔＝記憶方舟、守護者老燈、敵人蝕、主角小滿）、角色表與角色視覺基準，定稿 42 頁正文。</li>
+<li><b>2026-09-26 · 首批批量生成</b> — 42 頁提示詞分 4 批送進 ComfyUI（每批 10-12 張、間隔 3 秒、輪詢結果），42 張全部成功。</li>
+<li><b>2026-09-26 · 繪本檔（ODT）產出</b> — 先試直接寫 ODT 檔案格式，圖片被 LibreOffice 全數丟棄；改採「先做 DOCX 再轉 ODT」的中繼路線，搞定。</li>
+<li><b>2026-09-27 · 全書重生成（v2）</b> — 統一提示詞格式後全書重生。驗收時發現問題：「塔的造型沒有統一」——每張圖獨立生成，AI 每頁畫了不同的塔。</li>
+<li><b>2026-09-27 · 塔視覺塊（v3）</b> — 把固定塔描述（細高、圓頂、由內發光的巨大燈籠）寫進所有提示詞，以 P35 為基準頁，重生有塔的 15 頁。</li>
+<li><b>2026-09-27 · 驗收通過</b> — 確認塔造型；最終檔改名為「繪本_42頁完整版.odt」；目錄整理、腳本收進專案、git 版本控制。</li>
+<li><b>2026-09-27 · 靜態網頁版</b> — 把繪本做成翻頁電子書網頁（單一 HTML＋42 張圖，方向鍵、滑動或點畫面翻頁），不需要伺服器，GitHub Pages 即可發布。</li>
+</ol>
+<div class="credits"><b>生成環境</b>
+故事文字：qwen3.8-27b（大語言模型）
+圖片生成：Qwen-Image 2.1（int8）· 文字理解 Qwen3-VL 8B（int8）· VAE（bf16）
+硬體：NVIDIA GB10 · 128GB 統一記憶體
+軟體：ComfyUI 0.37.0 / PyTorch 2.10 / Python 3.12
+生成參數：1024×1024 · steps 30 · CFG 1.0 · euler / simple · denoise 1.0
+</div>
+<footer>
+《記憶方舟》42 頁 AI 繪本 · 全書 42 圖由 Qwen-Image 2.1 生成 · 2026
+</footer>
+</section>
+</div>
+<script>
+(function(){
+  var sheets = Array.prototype.slice.call(document.querySelectorAll('.sheet'));
+  var cur = 0, busy = false;
+  var cnt = document.getElementById('cnt'), bar = document.getElementById('bar');
+  function show(n){
+    n = Math.max(0, Math.min(sheets.length - 1, n));
+    if(n === cur) return;
+    for(var i = 0; i < sheets.length; i++){
+      sheets[i].classList.toggle('active', i === n);
+      sheets[i].classList.toggle('before', i < n);
+    }
+    cur = n;
+    cnt.textContent = (n + 1) + ' / ' + sheets.length;
+    bar.style.width = ((n + 1) / sheets.length * 100) + '%';
+  }
+  function guard(fn){
+    if(busy) return;
+    busy = true; fn();
+    setTimeout(function(){ busy = false; }, 520);
+  }
+  window.next = function(){ guard(function(){ show(cur + 1); }); };
+  window.prev = function(){ guard(function(){ show(cur - 1); }); };
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); window.next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); window.prev(); }
+  });
+  var stage = document.getElementById('stage'), tx = 0, ty = 0;
+  stage.addEventListener('click', function(e){
+    var r = stage.getBoundingClientRect();
+    if(e.clientX - r.left < r.width * 0.3) window.prev(); else window.next();
+  });
+  stage.addEventListener('touchstart', function(e){
+    tx = e.touches[0].clientX; ty = e.touches[0].clientY;
+  }, {passive:true});
+  stage.addEventListener('touchend', function(e){
+    var dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+    if(Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy)){
+      if(dx < 0) window.next(); else window.prev();
+    }
+  }, {passive:true});
+  var btn = document.getElementById('modeBtn');
+  btn.addEventListener('click', function(){
+    var list = document.body.classList.toggle('listmode');
+    btn.textContent = list ? '▤ 回到翻頁模式' : '⊞ 看完整直式版面';
+  });
+})();
+</script>
+</body></html>
