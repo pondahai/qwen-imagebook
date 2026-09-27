@@ -27,7 +27,7 @@ compress_images.py  壓圖腳本
 
 ## 重新生成圖片
 
-ComfyUI：`http://100.89.149.50:8188`（模板 `api/template.json`，seed 1234，1024x1024，每張間隔 3 秒）
+ComfyUI：`http://100.89.149.50:8188`（Linux / NVIDIA GB10 / 128GB 統一記憶體 / --highvram；模板 `api/template.json`，seed 1234，1024x1024，每張間隔 3 秒）
 
 ```
 python api/api_script.py 18 "prompt 內容"        # 單頁
@@ -36,6 +36,29 @@ python api/batch_generate.py --suffix v4        # 全部頁，輸出綴字尾 v4
 ```
 
 新圖輸出到 `generated/page{N}_{版本}.png`，已存在的頁會跳過。
+
+## 生成環境
+
+**故事**
+- 生成模型：qwen3.8-27b（LLM，用於撰寫故事正文與整理 42 頁提示詞）
+
+**圖片（ComfyUI 主機）**
+
+**硬體**
+- 主機：`100.89.149.50:8188`（Tailscale 內網位址）
+- 系統：Linux
+- GPU：NVIDIA GB10（128GB 統一記憶體）
+- ComfyUI 0.37.0、PyTorch 2.10、Python 3.12.3
+- 啟動參數：`--highvram --disable-mmap --disable-pinned-memory`
+
+**模型**
+- 主模型（UNet）：`qwen_image_2.1_int8_convrot.safetensors`
+- 文字編碼器（CLIP）：`qwen3vl_8b_int8_convrot.safetensors`
+- VAE：`qwen_image_2.1_vae_bf16.safetensors`
+
+**生成參數**
+- 畫布 1024x1024、steps 30、cfg 1.0、euler / simple、denoise 1.0、seed 1234
+- negative prompt：`ugly, blurry`
 
 ## 重新打包 ODT
 
