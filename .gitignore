@@ -1,0 +1,7 @@
+generated/
+archive/
+build_tmp/
+__pycache__/
+*.pyc
+.~lock.*
+*.tmp
